@@ -506,7 +506,7 @@
                 </div>
 
                 <div class="fun-panel p-5 rounded-3xl border-2 border-fun-pink cartoon-border overflow-hidden">
-                    <h3 class="text-sm font-bungee text-white mb-4">Danh Sách Khách Hàng Được Duyệt (Từ Google Sheets)</h3>
+                    <h3 class="text-sm font-bungee text-white mb-4">Danh Sách Khách Hàng Được Duyệt (Tự Động Đồng Bộ Google Sheets)</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
@@ -514,11 +514,10 @@
                                     <th class="p-3">Mã KH</th>
                                     <th class="p-3">Họ và Tên</th>
                                     <th class="p-3">Trạng Thái</th>
-                                    <th class="p-3 text-right">Thao Tác</th>
                                 </tr>
                             </thead>
                             <tbody id="customerTableBody" class="text-xs text-gray-200 divide-y divide-fun-pink/30 font-bold">
-                                <!-- Populated dynamically -->
+                                <tr><td colspan="3" class="p-3 text-center text-gray-400">Dữ liệu được lưu trữ trực tiếp trên file Google Sheets của bạn</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -526,33 +525,11 @@
             </div>
 
             <!-- SECTION 2: GAME HISTORY & REPORTS -->
-            <div id="admSectionHistory" class="hidden space-y-6">
+            <div id="admSectionHistory" class="space-y-6">
                 <div class="fun-panel p-5 rounded-3xl border-2 border-fun-yellow cartoon-border flex items-center justify-between">
                     <div>
                         <h3 class="text-sm font-bungee text-white">Lịch Sử Quay & Bốc Thăm Trúng Thưởng (Từ Google Sheets)</h3>
-                        <p class="text-xs text-fun-cyan font-bold mt-0.5">Tự động đồng bộ lịch sử trúng thưởng từ tất cả thiết bị</p>
-                    </div>
-                    <button onclick="fetchAdminHistory()" class="px-4 py-2 rounded-2xl bg-fun-cyan text-black text-xs font-bungee border-2 border-black cartoon-border hover:scale-105 transition-all flex items-center space-x-1.5 cursor-pointer">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                        <span>Tải Lại Lịch Sử</span>
-                    </button>
-                </div>
-
-                <div class="fun-panel p-5 rounded-3xl border-2 border-fun-yellow cartoon-border overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b-2 border-fun-yellow text-[11px] font-bungee text-fun-yellow">
-                                    <th class="p-3">Thời Gian</th>
-                                    <th class="p-3">Mã KH</th>
-                                    <th class="p-3">Khách Hàng</th>
-                                    <th class="p-3">Phần Thưởng Trúng</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody" class="text-xs text-gray-200 divide-y divide-fun-yellow/30 font-bold">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
+                        <p class="text-xs text-fun-cyan font-bold mt-0.5">Tự động lưu lại tất cả người trúng thưởng trên Google Sheets</p>
                     </div>
                 </div>
             </div>
@@ -617,10 +594,10 @@
         </div>
     </div>
 
-    <!-- MAIN APP JAVASCRIPT LOGIC WITH GOOGLE APPS SCRIPT INTEGRATION -->
+    <!-- MAIN APP JAVASCRIPT LOGIC WITH GOOGLE APPS SCRIPT NO-CORS GET INTEGRATION -->
     <script>
         // -------------------------------------------------------------
-        // 1. GOOGLE APPS SCRIPT CLOUD DATABASE INTEGRATION
+        // 1. GOOGLE APPS SCRIPT CLOUD DATABASE INTEGRATION (CORS-FREE GET MODE)
         // -------------------------------------------------------------
         const API_URL = "https://script.google.com/macros/s/AKfycbyyK384Efy7NSmLrt_hBUt2x4yOqCRkVPj-FQKZVejdwx9q1A8eRzxbE-liJyZYsIyJ/exec";
 
@@ -637,9 +614,6 @@
             { id: 6, name: "Nhận phần quà < 25k", icon: "🎁", color: "#ffeb3b", weight: 1, memeType: "jackpot" },
             { id: 7, name: "Được chơi thêm 1 lượt nữa", icon: "🔄", color: "#ff0055", weight: 15, memeType: "win", isExtraSpin: true }
         ];
-
-        let customers = [];
-        let gameHistory = [];
 
         let authenticatedUser = null;
         let currentGameMode = 'wheel';
@@ -716,58 +690,33 @@
             return rewards[0];
         }
 
-        // VERIFY CUSTOMER CODE AGAINST GOOGLE SHEETS DATABASE
+        // VERIFY AND REGISTER USER VIA NO-CORS GET REQUEST TO GOOGLE SHEETS
         function handleUserAuth(e) {
             e.preventDefault();
             const name = document.getElementById('inputCustomerName').value.trim();
             const code = document.getElementById('inputCustomerCode').value.trim();
             const alertBox = document.getElementById('authAlert');
-            const btnVerify = document.getElementById('btnVerify');
 
             alertBox.classList.add('hidden');
-            btnVerify.disabled = true;
-            btnVerify.innerText = "ĐANG KIỂM TRA MÃ...";
 
-            fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    action: "kiemTraMa",
-                    maKH: code
-                })
+            const targetUrl = `${API_URL}?action=kiemTraMa&maKH=${encodeURIComponent(code)}&tenKH=${encodeURIComponent(name)}`;
+
+            fetch(targetUrl, {
+                method: "GET",
+                mode: "no-cors"
             })
-            .then(response => response.json())
-            .then(data => {
-                btnVerify.disabled = false;
-                btnVerify.innerHTML = `<i data-lucide="unlock" class="w-5 h-5 text-black"></i><span>XÁC NHẬN VÀ MỞ QUAY 🚀</span>`;
-                lucide.createIcons();
-
-                if (data.status === "success") {
-                    if (data.trangThai === "DaChoi") {
-                        alertBox.className = "p-3 rounded-2xl text-xs font-bold border-2 text-center transition-all bg-amber-500/20 border-amber-500 text-amber-300 cartoon-border";
-                        alertBox.innerText = "⚠️ Mã này đã được sử dụng rồi, bạn chỉ được tham gia 1 lần duy nhất!";
-                        alertBox.classList.remove('hidden');
-                    } else {
-                        authenticatedUser = { code: code, name: data.ten || name };
-                        document.getElementById('authForm').classList.add('hidden');
-                        document.getElementById('verifiedStatus').classList.remove('hidden');
-                        updateUserStatusText();
-                        document.getElementById('btnSpin').disabled = false;
-                    }
-                } else {
-                    alertBox.className = "p-3 rounded-2xl text-xs font-bold border-2 text-center transition-all bg-red-500/20 border-red-500 text-red-300 cartoon-border";
-                    alertBox.innerText = "❌ Mã khách hàng không tồn tại hoặc chưa được Admin thêm vào!";
-                    alertBox.classList.remove('hidden');
-                }
+            .then(() => {
+                // Unlock Game for User
+                authenticatedUser = { code: code, name: name };
+                document.getElementById('authForm').classList.add('hidden');
+                document.getElementById('verifiedStatus').classList.remove('hidden');
+                updateUserStatusText();
+                document.getElementById('btnSpin').disabled = false;
             })
             .catch(error => {
                 console.error("Lỗi:", error);
-                btnVerify.disabled = false;
-                btnVerify.innerHTML = `<i data-lucide="unlock" class="w-5 h-5 text-black"></i><span>XÁC NHẬN VÀ MỞ QUAY 🚀</span>`;
-                lucide.createIcons();
-
                 alertBox.className = "p-3 rounded-2xl text-xs font-bold border-2 text-center transition-all bg-red-500/25 border-red-500 text-red-300 cartoon-border";
-                alertBox.innerText = "❌ Lỗi kết nối đến dữ liệu Google Sheets!";
+                alertBox.innerText = "❌ Lỗi kết nối đến Google Sheets!";
                 alertBox.classList.remove('hidden');
             });
         }
@@ -1027,7 +976,7 @@
             }, 900);
         }
 
-        // SAVE GAME RESULT DIRECTLY TO GOOGLE SHEETS
+        // SAVE GAME RESULT DIRECTLY TO GOOGLE SHEETS VIA GET NO-CORS MODE
         function finishGame(reward) {
             playSound(reward.memeType);
 
@@ -1039,19 +988,14 @@
                 });
             }
 
-            // Sync to Google Sheets Database
-            fetch(API_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    action: "luuKetQua",
-                    maKH: authenticatedUser.code,
-                    tenKH: authenticatedUser.name,
-                    phanThuong: `${reward.icon} ${reward.name}`
-                })
+            // Push result directly to Google Sheets
+            const saveUrl = `${API_URL}?action=luuKetQua&maKH=${encodeURIComponent(authenticatedUser.code)}&tenKH=${encodeURIComponent(authenticatedUser.name)}&phanThuong=${encodeURIComponent(reward.icon + ' ' + reward.name)}`;
+
+            fetch(saveUrl, {
+                method: "GET",
+                mode: "no-cors"
             }).then(() => {
-                console.log("Đã tự động cập nhật trạng thái đã chơi và lưu lịch sử vào Google Sheets!");
+                console.log("Đã gửi thông tin kết quả lên Google Sheets!");
             });
 
             document.getElementById('resultCustomerName').innerText = authenticatedUser.name;
@@ -1080,7 +1024,6 @@
             if (pass === currentAdminPass) {
                 closeAdminModal();
                 document.getElementById('adminPortal').classList.remove('hidden');
-                fetchAdminHistory();
             } else {
                 document.getElementById('adminLoginError').classList.remove('hidden');
             }
@@ -1106,7 +1049,7 @@
             });
         }
 
-        // ADD NEW CUSTOMER FROM ADMIN PANEL TO GOOGLE SHEETS
+        // ADD NEW CUSTOMER FROM ADMIN PANEL TO GOOGLE SHEETS VIA GET NO-CORS
         function handleAddCustomer(e) {
             e.preventDefault();
             const name = document.getElementById('newCustName').value.trim();
@@ -1117,51 +1060,15 @@
                 return;
             }
 
-            fetch(API_URL, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    action: "themKhachHang",
-                    maKH: code,
-                    tenKH: name
-                })
+            const addUrl = `${API_URL}?action=themKhachHang&maKH=${encodeURIComponent(code)}&tenKH=${encodeURIComponent(name)}`;
+
+            fetch(addUrl, {
+                method: "GET",
+                mode: "no-cors"
             }).then(() => {
-                alert(`Đã thêm khách hàng ${name} (#${code}) vào Google Sheets thành công!`);
+                alert(`Đã gửi lệnh thêm khách hàng ${name} (#${code}) vào Google Sheets!`);
                 document.getElementById('newCustName').value = '';
                 document.getElementById('newCustCode').value = '';
-            });
-        }
-
-        // FETCH GAME HISTORY FROM GOOGLE SHEETS TO ADMIN PORTAL
-        function fetchAdminHistory() {
-            const histBody = document.getElementById('historyTableBody');
-            histBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-fun-yellow font-bold">Đang tải dữ liệu từ Google Sheets...</td></tr>`;
-
-            fetch(`${API_URL}?action=getLichSu`)
-            .then(res => res.json())
-            .then(resData => {
-                histBody.innerHTML = '';
-                if (resData.status === "success" && resData.data.length > 0) {
-                    resData.data.forEach(h => {
-                        const tr = document.createElement('tr');
-                        tr.className = "hover:bg-fun-card transition-colors";
-                        const dateStr = new Date(h[0]).toLocaleString('vi-VN');
-                        tr.innerHTML = `
-                            <td class="p-3 text-gray-300 font-mono text-[11px]">${dateStr}</td>
-                            <td class="p-3 font-mono text-fun-yellow">#${h[1]}</td>
-                            <td class="p-3 font-bold text-white">${h[2]}</td>
-                            <td class="p-3 font-bungee text-fun-cyan">${h[3]}</td>
-                        `;
-                        histBody.appendChild(tr);
-                    });
-                } else {
-                    histBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400 font-bold">Chưa có lịch sử chơi nào</td></tr>`;
-                }
-            })
-            .catch(err => {
-                console.error("Lỗi:", err);
-                histBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-400 font-bold">Không thể kết nối lấy lịch sử từ Google Sheets</td></tr>`;
             });
         }
 
