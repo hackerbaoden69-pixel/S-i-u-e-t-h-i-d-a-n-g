@@ -1285,3 +1285,42 @@
     </script>
 </body>
 </html>
+// Đường link API Google Apps Script của bạn
+const API_URL = "https://script.google.com/macros/s/AKfycbyyK384Efy7NSmLrt_hBUt2x4yOqCRkVPj-FQKZVejdwx9q1A8eRzxbE-liJyZYsIyJ/exec";
+
+// 1. Hàm kiểm tra mã khi khách nhập vào ô đăng nhập
+function kiemTraMaKhachHang(maKH) {
+    fetch(`${API_URL}?action=kiemTraMa&maKH=${maKH}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            if (data.trangThai === "DaChoi") {
+                alert("Mã này đã được sử dụng rồi, bạn chỉ được chơi 1 lần duy nhất!");
+                // Chặn không cho chơi
+            } else {
+                alert(`Xin chào ${data.ten}, bạn có thể bắt đầu chơi!`);
+                // Cho phép hiển thị vòng quay/minigame
+            }
+        } else {
+            alert("Mã khách hàng không tồn tại hoặc chưa được Admin kích hoạt!");
+        }
+    })
+    .catch(error => console.error("Lỗi kết nối:", error));
+}
+
+// 2. Hàm gọi sau khi khách chơi xong và nhận phần thưởng
+function luuKetQuaChoi(maKH, tenKH, phanThuong) {
+    fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            action: "luuKetQua",
+            maKH: maKH,
+            tenKH: tenKH,
+            phanThuong: phanThuong
+        })
+    }).then(() => {
+        console.log("Đã cập nhật trạng thái đã chơi và lưu lịch sử thành công!");
+    });
+}
